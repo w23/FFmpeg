@@ -39,6 +39,7 @@ typedef struct ScaleVAAPIContext {
 
     char *w_expr;      // width expression string
     char *h_expr;      // height expression string
+		int crop_x, crop_y, crop_w, crop_h;
 } ScaleVAAPIContext;
 
 static const char *scale_vaapi_mode_name(int mode)
@@ -119,12 +120,12 @@ static int scale_vaapi_filter_frame(AVFilterLink *inlink, AVFrame *input_frame)
     memset(&params, 0, sizeof(params));
 
     input_region = (VARectangle) {
-        .x      = input_frame->crop_left,
-        .y      = input_frame->crop_top,
-        .width  = input_frame->width -
-                 (input_frame->crop_left + input_frame->crop_right),
-        .height = input_frame->height -
-                 (input_frame->crop_top + input_frame->crop_bottom),
+        .x      = input_frame->crop_left + ctx->crop_x,
+        .y      = input_frame->crop_top + ctx->crop_y,
+        .width  = ctx->crop_w ? ctx->crop_w : (input_frame->width -
+                 (input_frame->crop_left + input_frame->crop_right)),
+        .height = ctx->crop_h ? ctx->crop_h : (input_frame->height -
+                 (input_frame->crop_top + input_frame->crop_bottom)),
     };
 
     params.surface = input_surface;
@@ -191,6 +192,14 @@ static const AVOption scale_vaapi_options[] = {
       OFFSET(w_expr), AV_OPT_TYPE_STRING, {.str = "iw"}, .flags = FLAGS },
     { "h", "Output video height",
       OFFSET(h_expr), AV_OPT_TYPE_STRING, {.str = "ih"}, .flags = FLAGS },
+    { "cx", "Input crop x",
+      OFFSET(crop_x), AV_OPT_TYPE_INT, {.i64 = 0}, 0, 16384, .flags = FLAGS },
+    { "cy", "Input crop y",
+      OFFSET(crop_y), AV_OPT_TYPE_INT, {.i64 = 0}, 0, 16384, .flags = FLAGS },
+    { "cw", "Input crop width",
+      OFFSET(crop_w), AV_OPT_TYPE_INT, {.i64 = 0}, 0, 16384, .flags = FLAGS },
+    { "ch", "Input crop height",
+      OFFSET(crop_h), AV_OPT_TYPE_INT, {.i64 = 0}, 0, 16384, .flags = FLAGS },
     { "format", "Output video format (software format of hardware frames)",
       OFFSET(output_format_string), AV_OPT_TYPE_STRING, .flags = FLAGS },
     { "mode", "Scaling mode",
